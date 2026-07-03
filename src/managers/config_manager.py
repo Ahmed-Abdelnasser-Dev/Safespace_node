@@ -52,6 +52,24 @@ VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 # up and staying on the last-known-good config.
 MAX_RESTART_ATTEMPTS = 2
 
+# Node-local hardware / deployment keys (dot-notation). These describe THIS
+# physical Pi — which camera and mode it runs, its UART wiring, the local
+# MediaMTX binary — and must never be dictated by the CU. The CU pushes its
+# full stored config snapshot (not a delta), which carries stale/default
+# values for these keys; without protection, every push silently clobbers the
+# node's real hardware settings (e.g. camera.model flipping imx500-raw -> picam).
+# Stripped from any inbound config before it is merged, so the node's own
+# on-disk value always wins.
+NODE_LOCAL_KEYS = (
+    "camera.model",
+    "camera.imx500.camera_num",
+    "camera.imx500.model_path",
+    "gps.port",
+    "gps.baud_rate",
+    "stream.mediamtx_path",
+    "stream.mediamtx_config",
+)
+
 
 class ConfigManager:
     """
@@ -123,6 +141,18 @@ class ConfigManager:
         config_version = message.get("config_version")
         new_config = message.get("config")
 
+        # Strip node-local hardware keys before anything else: the CU pushes a
+        # full config snapshot carrying stale values for keys that describe this
+        # physical node (camera.model, gps.port, ...). The node owns those — a
+        # push must never change them. Done pre-validation so an ignored key
+        # (e.g. a mismatched camera.model) can't reject an otherwise-valid push.
+        new_config, stripped = self._strip_node_local_keys(new_config)
+        if stripped:
+            self.logger.info(
+                f"Config update {request_id}: ignoring node-local keys the CU "
+                f"cannot set — {', '.join(stripped)}"
+            )
+
         valid, reason = self._validate_config(new_config)
         if not valid:
             self.logger.warning(f"Rejected config update {request_id}: {reason}")
@@ -135,13 +165,11 @@ class ConfigManager:
             return
 
         try:
-            # Deep-merge the CU's payload onto the current on-disk config
-            # rather than replacing it wholesale. The CU may push only the
-            # keys it wants to change (a partial delta), and even a "full"
-            # push omits node-local hardware keys the CU has no knowledge of
-            # (stream.mediamtx_path, gps.port, camera.imx500.camera_num, ...).
-            # A wholesale write would erase every unmentioned key; merging
-            # updates only what was sent and preserves the rest.
+            # Deep-merge the (node-local-stripped) CU payload onto the current
+            # on-disk config rather than replacing it wholesale. A wholesale
+            # write would erase every key the snapshot doesn't mention; merging
+            # updates only what was sent and preserves the rest — including the
+            # node-local keys stripped above, which keep their on-disk values.
             current_config = self._load_current_config_from_disk()
             merged_config = self._deep_merge(current_config, new_config)
             backup_path = self._backup_current_config()
@@ -285,6 +313,51 @@ class ConfigManager:
         with open(self._config_file_path(), "r") as f:
             loaded = yaml.safe_load(f)
         return loaded if isinstance(loaded, dict) else {}
+
+    @staticmethod
+    def _strip_node_local_keys(new_config: Any) -> Tuple[Any, List[str]]:
+        """
+        Remove NODE_LOCAL_KEYS (dot-notation) from a CU-pushed config so the
+        node's own hardware/deployment values can never be overwritten.
+
+        Returns (cleaned_config, stripped_keys). Operates on a deep copy — the
+        caller's dict is untouched. Prunes dict branches that become empty once
+        a protected leaf is removed (e.g. gps: {port: ...} -> gps dropped), so
+        the merge doesn't rewrite a now-empty section.
+        """
+        import copy
+
+        if not isinstance(new_config, dict):
+            return new_config, []
+
+        cleaned = copy.deepcopy(new_config)
+        stripped: List[str] = []
+
+        for dotted in NODE_LOCAL_KEYS:
+            parts = dotted.split(".")
+            node = cleaned
+            # Walk to the parent of the leaf, bailing if the path is absent.
+            for part in parts[:-1]:
+                if not isinstance(node, dict) or part not in node:
+                    node = None
+                    break
+                node = node[part]
+            leaf = parts[-1]
+            if isinstance(node, dict) and leaf in node:
+                del node[leaf]
+                stripped.append(dotted)
+
+        # Prune any dict branches left empty by the removals above.
+        def _prune(d: dict):
+            for key in list(d.keys()):
+                v = d[key]
+                if isinstance(v, dict):
+                    _prune(v)
+                    if not v:
+                        del d[key]
+
+        _prune(cleaned)
+        return cleaned, stripped
 
     @staticmethod
     def _deep_merge(base: dict, override: dict) -> dict:
