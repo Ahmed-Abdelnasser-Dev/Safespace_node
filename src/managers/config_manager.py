@@ -135,8 +135,17 @@ class ConfigManager:
             return
 
         try:
+            # Deep-merge the CU's payload onto the current on-disk config
+            # rather than replacing it wholesale. The CU may push only the
+            # keys it wants to change (a partial delta), and even a "full"
+            # push omits node-local hardware keys the CU has no knowledge of
+            # (stream.mediamtx_path, gps.port, camera.imx500.camera_num, ...).
+            # A wholesale write would erase every unmentioned key; merging
+            # updates only what was sent and preserves the rest.
+            current_config = self._load_current_config_from_disk()
+            merged_config = self._deep_merge(current_config, new_config)
             backup_path = self._backup_current_config()
-            self._atomic_write_config(new_config)
+            self._atomic_write_config(merged_config)
         except Exception as e:
             self.logger.error(f"Failed to persist config update {request_id}: {e}")
             self._channel.send({
@@ -265,6 +274,39 @@ class ConfigManager:
         dst = Path(str(src) + ".bak")
         shutil.copy2(src, dst)
         return str(dst)
+
+    def _load_current_config_from_disk(self) -> dict:
+        """
+        Read the current config.yaml straight from disk to use as the merge
+        base. Deliberately not self.config.config: that in-memory dict carries
+        env-var overrides (SERVER_URL, NODE_ID, LOG_LEVEL) applied at load
+        time, which must not be baked back into the persisted file.
+        """
+        with open(self._config_file_path(), "r") as f:
+            loaded = yaml.safe_load(f)
+        return loaded if isinstance(loaded, dict) else {}
+
+    @staticmethod
+    def _deep_merge(base: dict, override: dict) -> dict:
+        """
+        Recursively merge override onto base, returning a new dict.
+
+        Nested dicts are merged key-by-key so a partial push only touches the
+        keys it names. Non-dict values (scalars and lists — e.g.
+        ai.models.<name>.target_classes) replace wholesale: if the CU sends a
+        list it is meant to be the new list, not appended to the old one.
+        """
+        result = dict(base)
+        for key, value in override.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = ConfigManager._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     def _atomic_write_config(self, new_config: dict):
         dst = self._config_file_path()
