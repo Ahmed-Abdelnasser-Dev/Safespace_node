@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QSizePolicy
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QFont, QImage, QPixmap
 
+from handlers.display.theme import DEFAULT_THEME
+
 
 class VideoFeedWidget(QFrame):
     """
@@ -20,16 +22,18 @@ class VideoFeedWidget(QFrame):
         widget.push_frame(bgr_numpy_array)
     """
 
-    def __init__(self, title: str = "FEED", parent=None):
+    def __init__(self, title: str = "FEED", parent=None, theme: dict = None):
         super().__init__(parent)
+        self.theme = theme or DEFAULT_THEME
+        v = self.theme['video_feed']
         self.setObjectName(f"feed_{title.lower().replace(' ', '_')}")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(320, 240)
 
         self.setStyleSheet(f"""
             QFrame#{self.objectName()} {{
-                background: rgba(0, 0, 0, 0.4);
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: {v['frame_bg']};
+                border: 1px solid {v['frame_border']};
                 border-radius: 10px;
             }}
         """)
@@ -42,7 +46,7 @@ class VideoFeedWidget(QFrame):
         self._title_label = QLabel(title)
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        self._title_label.setStyleSheet("color: #888; background: transparent;")
+        self._title_label.setStyleSheet(f"color: {v['title_text']}; background: transparent;")
         self._title_label.setFixedHeight(20)
         layout.addWidget(self._title_label)
 
@@ -58,7 +62,7 @@ class VideoFeedWidget(QFrame):
         self._fps_label = QLabel("0 FPS")
         self._fps_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self._fps_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-        self._fps_label.setStyleSheet("color: #00d4ff; background: transparent;")
+        self._fps_label.setStyleSheet(f"color: {v['fps_text']}; background: transparent;")
         self._fps_label.setFixedHeight(16)
         layout.addWidget(self._fps_label)
 

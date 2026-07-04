@@ -8,21 +8,25 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QProgressBar
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 
+from handlers.display.theme import DEFAULT_THEME
+
 
 class SystemMonitorWidget(QFrame):
     """Compact CPU / system usage monitor for the dev dashboard."""
 
-    def __init__(self, interval_ms: int = 1000, parent=None):
+    def __init__(self, interval_ms: int = 1000, parent=None, theme: dict = None):
         super().__init__(parent)
+        self.theme = theme or DEFAULT_THEME
+        m = self.theme['system_monitor']
         self.setObjectName("system_monitor")
         self.setFixedSize(200, 120)
 
-        self.setStyleSheet("""
-            QFrame#system_monitor {
-                background: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.12);
+        self.setStyleSheet(f"""
+            QFrame#system_monitor {{
+                background: {m['frame_bg']};
+                border: 1px solid {m['frame_border']};
                 border-radius: 10px;
-            }
+            }}
         """)
 
         layout = QVBoxLayout(self)
@@ -33,14 +37,14 @@ class SystemMonitorWidget(QFrame):
         title = QLabel("SYSTEM")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-        title.setStyleSheet("color: #888; background: transparent;")
+        title.setStyleSheet(f"color: {m['title_text']}; background: transparent;")
         layout.addWidget(title)
 
         # CPU label
         self._cpu_label = QLabel("CPU: 0%")
         self._cpu_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._cpu_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        self._cpu_label.setStyleSheet("color: #ffffff; background: transparent;")
+        self._cpu_label.setStyleSheet(f"color: {m['cpu_text']}; background: transparent;")
         layout.addWidget(self._cpu_label)
 
         # CPU progress bar
@@ -49,17 +53,17 @@ class SystemMonitorWidget(QFrame):
         self._cpu_bar.setValue(0)
         self._cpu_bar.setTextVisible(False)
         self._cpu_bar.setFixedHeight(10)
-        self._cpu_bar.setStyleSheet("""
-            QProgressBar {
-                background: rgba(255, 255, 255, 0.08);
+        self._cpu_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background: {m['bar_track_bg']};
                 border: none;
                 border-radius: 5px;
-            }
-            QProgressBar::chunk {
+            }}
+            QProgressBar::chunk {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #00d4ff, stop:1 #00ff88);
+                    stop:0 {self.theme['accent']}, stop:1 {m['bar_chunk_low']});
                 border-radius: 5px;
-            }
+            }}
         """)
         layout.addWidget(self._cpu_bar)
 
@@ -67,7 +71,7 @@ class SystemMonitorWidget(QFrame):
         self._mem_label = QLabel("MEM: 0%")
         self._mem_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._mem_label.setFont(QFont("Segoe UI", 9))
-        self._mem_label.setStyleSheet("color: #666; background: transparent;")
+        self._mem_label.setStyleSheet(f"color: {m['mem_text']}; background: transparent;")
         layout.addWidget(self._mem_label)
 
         # Polling timer
@@ -88,16 +92,17 @@ class SystemMonitorWidget(QFrame):
         self._mem_label.setText(f"MEM: {mem:.0f}%")
 
         # Color the bar based on load
+        m = self.theme['system_monitor']
         if cpu > 80:
-            chunk_color = "#ff4444"
+            chunk_color = m['bar_chunk_high']
         elif cpu > 50:
-            chunk_color = "#ffa500"
+            chunk_color = m['bar_chunk_mid']
         else:
-            chunk_color = "#00ff88"
+            chunk_color = m['bar_chunk_low']
 
         self._cpu_bar.setStyleSheet(f"""
             QProgressBar {{
-                background: rgba(255, 255, 255, 0.08);
+                background: {m['bar_track_bg']};
                 border: none;
                 border-radius: 5px;
             }}

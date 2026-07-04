@@ -20,6 +20,7 @@ from handlers.display.lane_widget import LaneWidget
 from handlers.display.speed_widget import SpeedWidget
 from handlers.display.video_feed_widget import VideoFeedWidget
 from handlers.display.system_monitor_widget import SystemMonitorWidget
+from handlers.display.theme import get_theme
 
 
 class MainWindow(QMainWindow):
@@ -41,6 +42,7 @@ class MainWindow(QMainWindow):
         self.logger = Logger("Display")
 
         self._mode = config.get('display.mode', 'prod').lower()
+        self.theme = get_theme(config)
         num_lanes = config.get_int('node.lanes', 3)
         default_speed = config.get_int('node.default_speed', 120)
         win_width = config.get_int('display.width', 1500)
@@ -50,12 +52,14 @@ class MainWindow(QMainWindow):
         title_suffix = " [DEV]" if self._mode == "dev" else ""
         self.setWindowTitle(f"Safespace — Highway Monitor{title_suffix}")
         self.resize(win_width, win_height)
-        self.setMinimumSize(960, 540)
+        # Low floor so prod mode fits a 1024x600 7" panel; Qt still honors each
+        # mode's own computed layout minimum (dev's video feeds keep it larger).
+        self.setMinimumSize(820, 480)
 
-        # Dark palette
+        # Theme-aware window palette
         palette = self.palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor("#1a1a2e"))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor("#ffffff"))
+        palette.setColor(QPalette.ColorRole.Window, QColor(self.theme['window_bg']))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.theme['window_text']))
         self.setPalette(palette)
         self.setAutoFillBackground(True)
 
@@ -100,22 +104,12 @@ class MainWindow(QMainWindow):
         header = QLabel("SAFESPACE HIGHWAY MONITOR  [DEV]")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        header.setStyleSheet("color: #00d4ff; letter-spacing: 3px; background: transparent;")
+        header.setStyleSheet(f"color: {self.theme['accent']}; letter-spacing: 3px; background: transparent;")
         root.addWidget(header)
 
-        # Accident banner (hidden)
-        self.accident_banner = QLabel("⚠  ACCIDENT DETECTED  ⚠")
-        self.accident_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.accident_banner.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        self.accident_banner.setStyleSheet("""
-            background: rgba(255, 50, 50, 0.25);
-            color: #ff4444;
-            border: 2px solid #ff4444;
-            border-radius: 10px;
-            padding: 10px;
-        """)
-        self.accident_banner.setVisible(False)
-        root.addWidget(self.accident_banner)
+        # Accident banner — always present with reserved fixed height so toggling
+        # it never reflows the layout; only its colors change (idle/active/dim).
+        self._build_accident_banner(root, font_size=18, height=54)
 
         # Middle: feeds (left) + lanes/speed/monitor (right)
         middle = QHBoxLayout()
@@ -125,10 +119,10 @@ class MainWindow(QMainWindow):
         feeds_col = QVBoxLayout()
         feeds_col.setSpacing(10)
 
-        self.input_feed = VideoFeedWidget("INPUT FEED")
+        self.input_feed = VideoFeedWidget("INPUT FEED", theme=self.theme)
         feeds_col.addWidget(self.input_feed, stretch=1)
 
-        self.ai_feed = VideoFeedWidget("AI FEED")
+        self.ai_feed = VideoFeedWidget("AI FEED", theme=self.theme)
         feeds_col.addWidget(self.ai_feed, stretch=1)
 
         middle.addLayout(feeds_col, stretch=3)
@@ -143,7 +137,7 @@ class MainWindow(QMainWindow):
         lanes_layout.setSpacing(10)
         self.lane_widgets: List[LaneWidget] = []
         for i in range(num_lanes):
-            lane = LaneWidget(i)
+            lane = LaneWidget(i, theme=self.theme)
             self.lane_widgets.append(lane)
             lanes_layout.addWidget(lane)
         right_col.addWidget(lanes_frame, stretch=1)
@@ -152,10 +146,10 @@ class MainWindow(QMainWindow):
         bottom_right = QHBoxLayout()
         bottom_right.setSpacing(12)
 
-        self.speed_widget = SpeedWidget(default_speed)
+        self.speed_widget = SpeedWidget(default_speed, theme=self.theme)
         bottom_right.addWidget(self.speed_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.system_monitor = SystemMonitorWidget()
+        self.system_monitor = SystemMonitorWidget(theme=self.theme)
         bottom_right.addWidget(self.system_monitor, alignment=Qt.AlignmentFlag.AlignCenter)
 
         right_col.addLayout(bottom_right)
@@ -172,41 +166,32 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(30, 20, 30, 20)
-        root.setSpacing(20)
+        root.setContentsMargins(16, 10, 16, 10)
+        root.setSpacing(10)
 
         # Header
         header = QLabel("SAFESPACE HIGHWAY MONITOR")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        header.setStyleSheet("color: #00d4ff; letter-spacing: 3px; background: transparent;")
+        header.setStyleSheet(f"color: {self.theme['accent']}; letter-spacing: 3px; background: transparent;")
         root.addWidget(header)
 
-        # Accident banner (hidden)
-        self.accident_banner = QLabel("⚠  ACCIDENT DETECTED  ⚠")
-        self.accident_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.accident_banner.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        self.accident_banner.setStyleSheet("""
-            background: rgba(255, 50, 50, 0.25);
-            color: #ff4444;
-            border: 2px solid #ff4444;
-            border-radius: 10px;
-            padding: 12px;
-        """)
-        self.accident_banner.setVisible(False)
-        root.addWidget(self.accident_banner)
+        # Accident banner — always present with reserved fixed height so toggling
+        # it never reflows the layout; only its colors change (idle/active/dim).
+        self._build_accident_banner(root, font_size=20, height=60)
 
         # Middle: lanes + speed
         middle = QHBoxLayout()
-        middle.setSpacing(20)
+        middle.setSpacing(12)
 
         # Lanes
         lanes_frame = QFrame()
         lanes_layout = QHBoxLayout(lanes_frame)
-        lanes_layout.setSpacing(15)
+        lanes_layout.setContentsMargins(0, 0, 0, 0)
+        lanes_layout.setSpacing(8)
         self.lane_widgets: List[LaneWidget] = []
         for i in range(num_lanes):
-            lane = LaneWidget(i)
+            lane = LaneWidget(i, theme=self.theme)
             self.lane_widgets.append(lane)
             lanes_layout.addWidget(lane)
         middle.addWidget(lanes_frame, stretch=3)
@@ -214,7 +199,7 @@ class MainWindow(QMainWindow):
         # Speed
         right = QVBoxLayout()
         right.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.speed_widget = SpeedWidget(default_speed)
+        self.speed_widget = SpeedWidget(default_speed, theme=self.theme)
         right.addWidget(self.speed_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
         middle.addLayout(right, stretch=1)
 
@@ -225,6 +210,39 @@ class MainWindow(QMainWindow):
 
     # ── Shared helpers ────────────────────────────────────────────
 
+    def _build_accident_banner(self, root: QVBoxLayout, font_size: int, height: int):
+        """Create the accident banner with a permanently reserved fixed-height row.
+
+        The banner is never hidden after construction — toggling visibility on a
+        layout-managed widget would collapse its row and reflow everything below.
+        Instead it stays present at all times and only its colors change between
+        idle / active / dim states (see `_apply_banner_style`).
+        """
+        self.accident_banner = QLabel("⚠  ACCIDENT DETECTED  ⚠")
+        self.accident_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.accident_banner.setFont(QFont("Segoe UI", font_size, QFont.Weight.Bold))
+        self.accident_banner.setFixedHeight(height)
+        root.addWidget(self.accident_banner)
+        self._apply_banner_style("idle")
+
+    def _apply_banner_style(self, state: str):
+        """Apply an idle / active / dim color scheme to the accident banner.
+
+        Only colors change — the widget's geometry (fixed height, always visible)
+        never does, so no layout reflow occurs on state transitions.
+        """
+        c = self.theme['accident_banner']
+        bg = c[f"{state}_bg"]
+        border = c[f"{state}_border"]
+        text = c[f"{state}_text"]
+        self.accident_banner.setStyleSheet(f"""
+            background: {bg};
+            color: {text};
+            border: 2px solid {border};
+            border-radius: 10px;
+            padding: 8px;
+        """)
+
     def _add_status_bar(self, root: QVBoxLayout):
         node_id = self.config.get('node.id', '?')
         desc = self.config.get('node.description', '')
@@ -232,13 +250,13 @@ class MainWindow(QMainWindow):
         status = QLabel(f"Node {node_id}  •  {desc}{mode_tag}  •  Press SPACE to report manually")
         status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         status.setFont(QFont("Segoe UI", 9))
-        status.setStyleSheet("color: #555555; background: transparent;")
+        status.setStyleSheet(f"color: {self.theme['status_text']}; background: transparent;")
         root.addWidget(status)
         # GPS indicator
         self.gps_label = QLabel("●  GPS: Searching...")
         self.gps_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.gps_label.setFont(QFont("Segoe UI", 9))
-        self.gps_label.setStyleSheet("color: #ff9900; background: transparent;")
+        self.gps_label.setStyleSheet(f"color: {self.theme['gps_searching']}; background: transparent;")
         root.addWidget(self.gps_label)
 
     # ── Thread-safe public API ────────────────────────────────────
@@ -275,13 +293,14 @@ class MainWindow(QMainWindow):
         self.speed_widget.set_speed(limit)
 
     def _set_accident(self, active: bool):
-        self.accident_banner.setVisible(active)
         self.speed_widget.set_alert_mode(active)
         if active:
+            self._flash_visible = True
+            self._apply_banner_style("active")
             self._flash_timer.start(500)
         else:
             self._flash_timer.stop()
-            self.accident_banner.setVisible(False)
+            self._apply_banner_style("idle")
 
     def _push_input_frame(self, frame):
         if self.input_feed is not None:
@@ -296,20 +315,20 @@ class MainWindow(QMainWindow):
             lane.set_status("up")
         self.speed_widget.set_speed(self._default_speed)
         self.speed_widget.set_alert_mode(False)
-        self.accident_banner.setVisible(False)
         self._flash_timer.stop()
+        self._apply_banner_style("idle")
 
     def _flash_toggle(self):
         self._flash_visible = not self._flash_visible
-        self.accident_banner.setVisible(self._flash_visible)
+        self._apply_banner_style("active" if self._flash_visible else "dim")
 
     def _update_gps_indicator(self, has_fix: bool):
         if has_fix:
             self.gps_label.setText("●  GPS: Fix Acquired")
-            self.gps_label.setStyleSheet("color: #00ff88; background: transparent;")
+            self.gps_label.setStyleSheet(f"color: {self.theme['gps_fix']}; background: transparent;")
         else:
             self.gps_label.setText("●  GPS: Searching...")
-            self.gps_label.setStyleSheet("color: #ff9900; background: transparent;")
+            self.gps_label.setStyleSheet(f"color: {self.theme['gps_searching']}; background: transparent;")
 
     # ── Keyboard ──────────────────────────────────────────────────
 
