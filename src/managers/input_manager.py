@@ -12,8 +12,8 @@ from cv2.typing import MatLike
 
 from utils.config import Config
 from utils.logger import Logger
-from handlers.camera import CameraHandler
-from handlers.video import VideoHandler
+from handlers.camera_handler import CameraHandler
+from handlers.video_handler import VideoHandler
 from handlers.frame_buffer import FrameBuffer
 
 # Type aliases for callbacks
