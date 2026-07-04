@@ -44,6 +44,7 @@ class CameraHandler:
         # IMX500-specific
         self._imx500: IMX500 = None
         self._last_detections: Optional[Any] = None
+        self._labels: List[str] = []  # class names for on-chip .rpk model
 
     # ── Start / Stop ──────────────────────────────────────────────
 
@@ -175,6 +176,9 @@ class CameraHandler:
             intrinsics.max_detections = self.config.get_int('camera.imx500.max_detections', 10)
         # Don't assign it back — already modified the object
 
+        # Load class names so detections can be labelled/filtered by name.
+        self._load_labels(intrinsics)
+
         self.camera = Picamera2(self._imx500.camera_num)
         res = self.config.get('camera.resolution', {})
         cam_config = self.camera.create_preview_configuration(
@@ -188,6 +192,44 @@ class CameraHandler:
         self._running = True
         self.logger.info(f"Camera started (IMX500, confidence={confidence})")
         return True
+
+    def _load_labels(self, intrinsics) -> None:
+        """
+        Populate ``self._labels`` with the on-chip model's class names.
+
+        Priority:
+          1. An explicit ``camera.imx500.labels_path`` file (one label per line).
+          2. Labels already embedded in the .rpk network intrinsics.
+        On both intrinsics and detections, index ``class_id`` maps into this list.
+        """
+        labels: List[str] = []
+
+        labels_path = self.config.get('camera.imx500.labels_path', '') or ''
+        if labels_path and Path(labels_path).exists():
+            try:
+                with open(labels_path, "r", encoding="utf-8") as fh:
+                    labels = [ln.strip() for ln in fh if ln.strip()]
+                self.logger.info(f"Loaded {len(labels)} IMX500 labels from {labels_path}")
+            except Exception as e:
+                self.logger.warning(f"Failed to read labels file '{labels_path}': {e}")
+
+        if not labels:
+            embedded = getattr(intrinsics, 'labels', None)
+            if embedded:
+                labels = [str(x).strip() for x in embedded if str(x).strip()]
+                self.logger.info(f"Using {len(labels)} labels embedded in the .rpk")
+
+        if not labels:
+            self.logger.warning(
+                "No IMX500 class labels available (no labels_path file and none "
+                "embedded in the .rpk). Detections will fall back to 'class_<id>'."
+            )
+        else:
+            # Ensure the on-chip pipeline uses the same labels we resolved.
+            if hasattr(intrinsics, 'labels'):
+                intrinsics.labels = labels
+
+        self._labels = labels
 
     def stop(self):
         """Release the camera device."""
@@ -262,6 +304,10 @@ class CameraHandler:
         if self.camera_type != 'imx500':
             return None
         return self._last_detections
+
+    def get_imx500_labels(self) -> List[str]:
+        """Class names for the on-chip .rpk model (empty if none resolved)."""
+        return self._labels
 
     # ── Properties ────────────────────────────────────────────────
 
