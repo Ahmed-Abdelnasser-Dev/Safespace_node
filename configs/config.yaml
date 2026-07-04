@@ -121,7 +121,7 @@ display:
   width: 1500
   height: 856
   fullscreen: false
-  theme: dark
+  theme: light                     # "light" (daytime, high-contrast) or "dark" (night)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging:

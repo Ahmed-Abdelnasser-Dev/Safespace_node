@@ -1,7 +1,7 @@
 """
 Config Manager — CU-driven configuration updates over a dedicated WebSocket.
 
-Owns the config channel (handlers/config_channel.py) and the full lifecycle
+Owns the config channel (handlers/config_channel_handler.py) and the full lifecycle
 of a CU-pushed config change:
 
     config.update (valid)  -> backup + atomic persist -> write restart marker
@@ -22,7 +22,7 @@ persisted and nothing restarts.
 
 config.applied notifications are persisted to disk and retried on the next
 channel reconnect if the CU is unreachable when they need to be sent —
-unlike accident reports (handlers/socket.py), which are dropped silently
+unlike accident reports (handlers/socket_handler.py), which are dropped silently
 when the socket is offline.
 """
 import hashlib
@@ -39,7 +39,7 @@ from utils.config import Config
 from utils.constants import CONFIG_NOTIFY_QUEUE_PATH
 from utils.logger import Logger
 from utils import restart_manager
-from handlers.config_channel import ConfigChannelHandler
+from handlers.config_channel_handler import ConfigChannelHandler
 
 
 # Camera modes CameraHandler actually supports — see CLAUDE.md's

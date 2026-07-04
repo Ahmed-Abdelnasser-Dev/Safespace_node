@@ -138,7 +138,7 @@ cable gets an address but never becomes the default route — Wi-Fi keeps provid
 internet. See the README "Wired bring-up" section and `scripts/setup-direct-link.sh`.
 
 **Single CU address.** Every consumer reads the CU base URL from one config key,
-`network.server_url` (`src/managers/network.py`, `src/handlers/socket.py`). No CU
+`network.server_url` (`src/managers/network_manager.py`, `src/handlers/socket_handler.py`). No CU
 IP is hardcoded; the only literals in code are the `0.0.0.0` registration fallback
 and `rtsp://localhost` (the node's *local* MediaMTX). `register_node()` also reports
 the outbound source IP it uses to reach the CU (UDP-connect trick) in `nodeSpecs.ipAddress`.
@@ -168,7 +168,7 @@ from the same `network.server_url` origin via `network.config_ws_path`
 (default `/ws/nodes/config`).
 
 ```
-src/handlers/config_channel.py   ConfigChannelHandler — transport only,
+src/handlers/config_channel_handler.py   ConfigChannelHandler — transport only,
                                   mirrors SocketHandler's raw-WS reconnect/
                                   backoff (1s → 30s, doubling, reset on connect)
 src/managers/config_manager.py   ConfigManager — validate/persist/restart/

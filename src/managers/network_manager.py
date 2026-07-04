@@ -37,7 +37,7 @@ from utils.constants import (
     STATUS_REJECTED,
     BACKEND_LANE_STATUS_MAP,
 )
-from handlers.socket import SocketHandler
+from handlers.socket_handler import SocketHandler
 
 
 # Type aliases

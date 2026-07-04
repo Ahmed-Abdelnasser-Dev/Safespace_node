@@ -48,23 +48,23 @@ Safespace_node/
 ├── src/
 │   ├── main.py              SafespaceNode orchestrator + CLI entry point
 │   ├── managers/
-│   │   ├── ai.py            AIManager — inference loop + model registry
-│   │   ├── input.py         InputManager — capture loop
-│   │   ├── output.py        OutputManager — display bridge
-│   │   ├── network.py       NetworkManager — heartbeat + accident + commands
-│   │   ├── stream.py        StreamManager — MediaMTX subprocess + StreamHandler
-│   │   └── config_manager.py ConfigManager — CU-driven config update lifecycle
+│   │   ├── ai_manager.py      AIManager — inference loop + model registry
+│   │   ├── input_manager.py   InputManager — capture loop
+│   │   ├── output_manager.py  OutputManager — display bridge
+│   │   ├── network_manager.py NetworkManager — heartbeat + accident + commands
+│   │   ├── stream_manager.py  StreamManager — MediaMTX subprocess + StreamHandler
+│   │   └── config_manager.py  ConfigManager — CU-driven config update lifecycle
 │   ├── handlers/
-│   │   ├── camera.py        CameraHandler (picam / imx500 / imx500-raw)
-│   │   ├── stream_handler.py StreamHandler — FrameBuffer → ffmpeg → MediaMTX RTSP
-│   │   ├── video.py         VideoHandler (file playback, same interface as camera)
-│   │   ├── frame_buffer.py  FrameBuffer — deque + threading.Lock
-│   │   ├── model_loader.py  ModelLoader — auto-detect .pt/.onnx, LRU cache
+│   │   ├── camera_handler.py  CameraHandler (picam / imx500 / imx500-raw)
+│   │   ├── stream_handler.py  StreamHandler — FrameBuffer → ffmpeg → MediaMTX RTSP
+│   │   ├── video_handler.py   VideoHandler (file playback, same interface as camera)
+│   │   ├── frame_buffer.py    FrameBuffer — deque + threading.Lock
+│   │   ├── model_loader.py    ModelLoader — auto-detect .pt/.onnx, LRU cache
 │   │   ├── model_detection.py ModelDetection — YOLO track(), ONNX letterbox+NMS
-│   │   ├── onnx_model.py    OnnxModel — onnxruntime session wrapper
-│   │   ├── socket.py        SocketHandler — Socket.IO + raw WS
-│   │   ├── config_channel.py ConfigChannelHandler — dedicated WS transport for config.update
-│   │   ├── gps_handler.py   GPSHandler — SIM808 UART polling
+│   │   ├── onnx_model.py      OnnxModel — onnxruntime session wrapper
+│   │   ├── socket_handler.py  SocketHandler — Socket.IO + raw WS
+│   │   ├── config_channel_handler.py ConfigChannelHandler — dedicated WS transport for config.update
+│   │   ├── gps_handler.py     GPSHandler — SIM808 UART polling
 │   │   └── display/
 │   │       ├── display_handler.py  public API (wraps QApplication + MainWindow)
 │   │       ├── main_window.py      dev/prod layouts + pyqtSignals

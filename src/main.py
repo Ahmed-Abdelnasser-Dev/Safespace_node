@@ -17,11 +17,11 @@ from utils.config import Config
 from utils.logger import Logger
 from utils import restart_manager
 from handlers.frame_buffer import FrameBuffer
-from managers.input import InputManager
-from managers.ai import AIManager
-from managers.output import OutputManager
-from managers.network import NetworkManager
-from managers.stream import StreamManager
+from managers.input_manager import InputManager
+from managers.ai_manager import AIManager
+from managers.output_manager import OutputManager
+from managers.network_manager import NetworkManager
+from managers.stream_manager import StreamManager
 from managers.config_manager import ConfigManager
 from handlers.gps_handler import GPSHandler
 
