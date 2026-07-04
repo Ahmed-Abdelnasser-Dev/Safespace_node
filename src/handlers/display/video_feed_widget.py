@@ -28,7 +28,7 @@ class VideoFeedWidget(QFrame):
         v = self.theme['video_feed']
         self.setObjectName(f"feed_{title.lower().replace(' ', '_')}")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setMinimumSize(320, 240)
+        self.setMinimumSize(220, 190)
 
         self.setStyleSheet(f"""
             QFrame#{self.objectName()} {{
@@ -39,15 +39,15 @@ class VideoFeedWidget(QFrame):
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(3)
 
         # Title
         self._title_label = QLabel(title)
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        self._title_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         self._title_label.setStyleSheet(f"color: {v['title_text']}; background: transparent;")
-        self._title_label.setFixedHeight(20)
+        self._title_label.setFixedHeight(16)
         layout.addWidget(self._title_label)
 
         # Video frame display
@@ -55,7 +55,7 @@ class VideoFeedWidget(QFrame):
         self._frame_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._frame_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._frame_label.setStyleSheet("background: transparent;")
-        self._frame_label.setMinimumSize(300, 200)
+        self._frame_label.setMinimumSize(200, 140)
         layout.addWidget(self._frame_label, stretch=1)
 
         # FPS overlay label (bottom-right)
@@ -63,7 +63,7 @@ class VideoFeedWidget(QFrame):
         self._fps_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self._fps_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         self._fps_label.setStyleSheet(f"color: {v['fps_text']}; background: transparent;")
-        self._fps_label.setFixedHeight(16)
+        self._fps_label.setFixedHeight(14)
         layout.addWidget(self._fps_label)
 
         # FPS tracking
