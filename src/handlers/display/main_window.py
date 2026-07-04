@@ -97,8 +97,8 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(20, 15, 20, 15)
-        root.setSpacing(12)
+        root.setContentsMargins(14, 8, 14, 8)
+        root.setSpacing(8)
 
         # Header
         header = QLabel("SAFESPACE HIGHWAY MONITOR  [DEV]")
