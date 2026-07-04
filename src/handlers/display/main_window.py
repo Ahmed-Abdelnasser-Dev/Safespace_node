@@ -166,15 +166,11 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(16, 10, 16, 10)
+        root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(10)
 
-        # Header
-        header = QLabel("SAFESPACE HIGHWAY MONITOR")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        header.setStyleSheet(f"color: {self.theme['accent']}; letter-spacing: 3px; background: transparent;")
-        root.addWidget(header)
+        # No header title and no bottom status/GPS text in prod mode — the field
+        # display is lanes + speed + accident banner only. Both stay in dev mode.
 
         # Accident banner — always present with reserved fixed height so toggling
         # it never reflows the layout; only its colors change (idle/active/dim).
@@ -204,9 +200,6 @@ class MainWindow(QMainWindow):
         middle.addLayout(right, stretch=1)
 
         root.addLayout(middle, stretch=1)
-
-        # Status bar
-        self._add_status_bar(root)
 
     # ── Shared helpers ────────────────────────────────────────────
 
@@ -323,6 +316,8 @@ class MainWindow(QMainWindow):
         self._apply_banner_style("active" if self._flash_visible else "dim")
 
     def _update_gps_indicator(self, has_fix: bool):
+        if not hasattr(self, 'gps_label'):
+            return  # prod mode has no on-screen GPS/status text
         if has_fix:
             self.gps_label.setText("●  GPS: Fix Acquired")
             self.gps_label.setStyleSheet(f"color: {self.theme['gps_fix']}; background: transparent;")
