@@ -405,22 +405,25 @@ class SafespaceNode:
                 annotated = box_annotator.annotate(frame.copy(), sv_detections)
                 annotated = label_annotator.annotate(annotated, sv_detections, labels)
 
-                # Show every detection on the display, but only report the ones
-                # that are actually accidents (not e.g. a normal car/person).
+                # Push annotated frame for display (all detections, for visual).
                 if self.output:
-                    self.output.on_imx500_detected(sv_detections, annotated)
+                    self.output.push_ai_frame(annotated)
 
+                # Filter to accident classes only before triggering alert/report.
                 accident_detections = self._filter_accident_classes(
                     sv_detections, class_name
                 )
-                if self.network and len(accident_detections) > 0:
-                    self.network.report_accident(accident_detections, frame)
+                if len(accident_detections) > 0:
+                    if self.output:
+                        self.output.on_imx500_accident(accident_detections, frame)
+                    if self.network:
+                        self.network.report_accident(accident_detections, frame)
             else:
                 if self.output:
-                    self.output.on_imx500_detected(None, frame)
+                    self.output.push_ai_frame(frame)
         else:
             if self.output:
-                self.output.on_imx500_detected(None, frame)
+                self.output.push_ai_frame(frame)
 
     # Keywords used to auto-classify a class name as an accident when no
     # explicit camera.imx500.accident_classes list is configured.
