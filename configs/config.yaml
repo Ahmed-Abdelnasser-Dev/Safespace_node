@@ -30,9 +30,15 @@ camera:
   imx500:                          # Used by "imx500" and "imx500-raw" modes
     camera_num: 0                  # Picamera2 camera index for IMX500 hardware
     model_path: models/accidents-pro-imx.rpk  # .rpk for "imx500" mode only
+    labels_path: ""                # Optional class-names file (one label per line).
+                                   # Leave empty to use labels embedded in the .rpk.
     confidence: 0.5                # Minimum confidence for on-chip detections
     iou_threshold: 0.65            # NMS IOU threshold for on-chip output tensors
     max_detections: 10             # Maximum detections per frame from on-chip NPU
+    accident_classes: []           # Class names (or integer IDs) that count as an
+                                   # accident. Only these trigger a report. Leave
+                                   # EMPTY to treat every detection as an accident
+                                   # (not recommended — will over-report).
 
 # ── Frame buffer ──────────────────────────────────────────────────────────────
 buffer:
@@ -47,26 +53,24 @@ ai:
       path: models/Accident_and_fire_detector.pt
       confidence: 0.6
       enabled: true
-      target_classes:              # Leave empty to accept all classes
-        - bus
+      target_classes:              # Accident-only classes. Plain vehicle
+        # classes (car / bus / truck / motorcycle) are intentionally excluded
+        # so normal traffic does NOT trigger an accident report.
         - bus_bus_accident
         - bus_object_accident
         - bus_person_accident
         - bus_truck_accident
-        - car
         - car_bus_accident
         - car_car_accident
         - car_motorcycle_accident
         - car_object_accident
         - car_person_accident
         - car_truck_accident
-        - motorcycle
         - motorcycle_bus_accident
         - motorcycle_motorcycle_accident
         - motorcycle_object_accident
         - motorcycle_person_accident
         - motorcycle_truck_accident
-        - truck
         - truck_object_accident
         - truck_person_accident
         - truck_truck_accident

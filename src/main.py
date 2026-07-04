@@ -355,7 +355,7 @@ class SafespaceNode:
         """
         import numpy as np
         import supervision as sv
-        
+
         num_detections = len(detections.get("boxes", [])) if detections else 0
         if num_detections > 0:
             orig_h, orig_w = frame.shape[:2]
@@ -383,27 +383,73 @@ class SafespaceNode:
             sv_detections = sv_detections[mask]
 
             if len(sv_detections) > 0:
+                # Resolve real class names from the on-chip model's labels.
+                labels_list = []
+                if hasattr(self.input.source, 'get_imx500_labels'):
+                    labels_list = self.input.source.get_imx500_labels()
+
+                def class_name(cid: int) -> str:
+                    return labels_list[cid] if 0 <= cid < len(labels_list) else f"class_{cid}"
+
                 self.logger.warning(
-                    f"IMX500 DETECTION: {len(sv_detections)} object(s) detected"
+                    f"IMX500 DETECTION: {len(sv_detections)} object(s) detected "
+                    f"({', '.join(class_name(int(c)) for c in sv_detections.class_id)})"
                 )
                 box_annotator = sv.BoxAnnotator(thickness=2)
                 label_annotator = sv.LabelAnnotator(text_scale=0.5, text_thickness=1)
-                
-                labels = [f"class_{c} {conf:.2f}" for c, conf in zip(sv_detections.class_id, sv_detections.confidence)]
+
+                labels = [
+                    f"{class_name(int(c))} {conf:.2f}"
+                    for c, conf in zip(sv_detections.class_id, sv_detections.confidence)
+                ]
                 annotated = box_annotator.annotate(frame.copy(), sv_detections)
                 annotated = label_annotator.annotate(annotated, sv_detections, labels)
 
+                # Show every detection on the display, but only report the ones
+                # that are actually accidents (not e.g. a normal car/person).
                 if self.output:
                     self.output.on_imx500_detected(sv_detections, annotated)
 
-                if self.network:
-                    self.network.report_accident(sv_detections, frame)
+                accident_detections = self._filter_accident_classes(
+                    sv_detections, class_name
+                )
+                if self.network and len(accident_detections) > 0:
+                    self.network.report_accident(accident_detections, frame)
             else:
                 if self.output:
                     self.output.on_imx500_detected(None, frame)
         else:
             if self.output:
                 self.output.on_imx500_detected(None, frame)
+
+    def _filter_accident_classes(self, detections, class_name):
+        """
+        Keep only detections whose class counts as an accident.
+
+        Driven by ``camera.imx500.accident_classes`` (class names or integer IDs).
+        An empty list means "treat every detection as an accident" — the caller
+        gets all detections back, but we warn since that over-reports.
+        """
+        import numpy as np
+
+        accident_classes = self.config.get('camera.imx500.accident_classes', []) or []
+        if not accident_classes:
+            self.logger.warning(
+                "camera.imx500.accident_classes is empty — every detection is "
+                "being reported as an accident. Set it to the accident class "
+                "names/IDs to stop over-reporting."
+            )
+            return detections
+
+        name_targets = {str(a).lower() for a in accident_classes}
+        id_targets = {int(a) for a in accident_classes if isinstance(a, int)
+                      or (isinstance(a, str) and a.isdigit())}
+
+        keep = [
+            i for i, cid in enumerate(detections.class_id)
+            if class_name(int(cid)).lower() in name_targets or int(cid) in id_targets
+        ]
+        return detections[np.array(keep, dtype=int)] if keep else detections[np.array([], dtype=int)]
 
     def _on_manual_trigger(self):
         """Called when the user presses SPACE on the display."""
