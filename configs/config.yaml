@@ -35,7 +35,7 @@ camera:
     confidence: 0.5                # Minimum confidence for on-chip detections
     iou_threshold: 0.65            # NMS IOU threshold for on-chip output tensors
     max_detections: 10             # Maximum detections per frame from on-chip NPU
-    accident_classes: []           # Class names (or integer IDs) that count as an
+    accident_classes: [bus_bus_accident, bus_object_accident, bus_person_accident, bus_truck_accident, car_bus_accident, car_car_accident, car_motorcycle_accident, car_object_accident, car_person_accident, car_truck_accident, motorcycle_bus_accident, motorcycle_motorcycle_accident, motorcycle_object_accident, motorcycle_person_accident, motorcycle_truck_accident, truck_object_accident, truck_person_accident, truck_truck_accident]           # Class names (or integer IDs) that count as an
                                    # accident — only these trigger a report. When
                                    # EMPTY, any class whose name contains
                                    # "accident"/"crash"/"collision"/"fire"/"smoke"
