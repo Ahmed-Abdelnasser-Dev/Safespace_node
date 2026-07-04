@@ -122,9 +122,9 @@ gps:
 display:
   mode: dev                        # "dev" = video feeds + AI overlay + system monitor
                                    # "prod" = lanes + speed + warnings only
-  width: 1500
+  width: 1500                      # Windowed size (used only when fullscreen: false)
   height: 856
-  fullscreen: false
+  fullscreen: true                 # Fill the panel (kiosk). Press F11 to toggle at runtime
   theme: light                     # "light" (daytime, high-contrast) or "dark" (night)
 
 # ── Logging ───────────────────────────────────────────────────────────────────

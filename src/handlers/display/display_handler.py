@@ -6,7 +6,7 @@ This is the only class external code needs to import.
 import sys
 from typing import Optional, Callable
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import QApplication
 
 from utils.config import Config
@@ -54,9 +54,17 @@ class DisplayHandler:
         self._window = MainWindow(self.config, on_manual_trigger=self.on_manual_trigger)
 
         if self.config.get_bool('display.fullscreen', False):
+            # Kiosk mode for the field panel: fill the screen and hide the mouse
+            # cursor. The window still needs focus (below) for SPACE / ESC / F11.
             self._window.showFullScreen()
+            self._window.setCursor(Qt.CursorShape.BlankCursor)
         else:
             self._window.show()
+
+        # Ensure the window is focused so keyboard shortcuts work — under some
+        # Pi window managers a fullscreen window opens without keyboard focus.
+        self._window.raise_()
+        self._window.activateWindow()
 
         # Periodically refresh the GPS indicator from the injected provider.
         # Runs on the Qt thread, so widget updates are safe.

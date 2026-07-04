@@ -337,4 +337,15 @@ class MainWindow(QMainWindow):
             self.on_manual_trigger()
         elif event.key() == Qt.Key.Key_Escape:
             self.close()
+        elif event.key() == Qt.Key.Key_F11:
+            self._toggle_fullscreen()
         super().keyPressEvent(event)
+
+    def _toggle_fullscreen(self):
+        """Toggle fullscreen (kiosk) at runtime and keep the cursor in sync."""
+        if self.isFullScreen():
+            self.showNormal()
+            self.unsetCursor()
+        else:
+            self.showFullScreen()
+            self.setCursor(Qt.CursorShape.BlankCursor)
