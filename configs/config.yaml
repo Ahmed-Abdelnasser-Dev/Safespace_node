@@ -36,9 +36,12 @@ camera:
     iou_threshold: 0.65            # NMS IOU threshold for on-chip output tensors
     max_detections: 10             # Maximum detections per frame from on-chip NPU
     accident_classes: []           # Class names (or integer IDs) that count as an
-                                   # accident. Only these trigger a report. Leave
-                                   # EMPTY to treat every detection as an accident
-                                   # (not recommended — will over-report).
+                                   # accident — only these trigger a report. When
+                                   # EMPTY, any class whose name contains
+                                   # "accident"/"crash"/"collision"/"fire"/"smoke"
+                                   # is treated as an accident (normal classes like
+                                   # car/bus/person are ignored). Set an explicit
+                                   # list to override the keyword heuristic.
 
 # ── Frame buffer ──────────────────────────────────────────────────────────────
 buffer:
