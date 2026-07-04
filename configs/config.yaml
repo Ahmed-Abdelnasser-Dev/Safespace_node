@@ -30,7 +30,7 @@ camera:
   imx500:                          # Used by "imx500" and "imx500-raw" modes
     camera_num: 0                  # Picamera2 camera index for IMX500 hardware
     model_path: models/accidents-pro-imx.rpk  # .rpk for "imx500" mode only
-    labels_path: ""                # Optional class-names file (one label per line).
+    labels_path: "models/labels.txt"                # Optional class-names file (one label per line).
                                    # Leave empty to use labels embedded in the .rpk.
     confidence: 0.5                # Minimum confidence for on-chip detections
     iou_threshold: 0.65            # NMS IOU threshold for on-chip output tensors
@@ -74,8 +74,6 @@ ai:
         - truck_object_accident
         - truck_person_accident
         - truck_truck_accident
-        - smoke
-        - fire
 
     # Example: ONNX model (uncomment and set enabled: true to activate)
     accident_detection_onnx:
