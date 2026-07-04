@@ -422,34 +422,38 @@ class SafespaceNode:
             if self.output:
                 self.output.on_imx500_detected(None, frame)
 
+    # Keywords used to auto-classify a class name as an accident when no
+    # explicit camera.imx500.accident_classes list is configured.
+    _ACCIDENT_KEYWORDS = ("accident", "crash", "collision")
+
     def _filter_accident_classes(self, detections, class_name):
         """
         Keep only detections whose class counts as an accident.
 
         Driven by ``camera.imx500.accident_classes`` (class names or integer IDs).
-        An empty list means "treat every detection as an accident" — the caller
-        gets all detections back, but we warn since that over-reports.
+        When that list is EMPTY, fall back to a keyword heuristic: a class is an
+        accident if its name contains "accident"/"crash"/"collision"/"fire"/
+        "smoke". This keeps normal classes (car, bus, person, …) from being
+        reported without requiring every accident label to be enumerated.
         """
         import numpy as np
 
         accident_classes = self.config.get('camera.imx500.accident_classes', []) or []
-        if not accident_classes:
-            self.logger.warning(
-                "camera.imx500.accident_classes is empty — every detection is "
-                "being reported as an accident. Set it to the accident class "
-                "names/IDs to stop over-reporting."
-            )
-            return detections
 
-        name_targets = {str(a).lower() for a in accident_classes}
-        id_targets = {int(a) for a in accident_classes if isinstance(a, int)
-                      or (isinstance(a, str) and a.isdigit())}
+        if accident_classes:
+            name_targets = {str(a).lower() for a in accident_classes}
+            id_targets = {int(a) for a in accident_classes if isinstance(a, int)
+                          or (isinstance(a, str) and a.isdigit())}
 
-        keep = [
-            i for i, cid in enumerate(detections.class_id)
-            if class_name(int(cid)).lower() in name_targets or int(cid) in id_targets
-        ]
-        return detections[np.array(keep, dtype=int)] if keep else detections[np.array([], dtype=int)]
+            def is_accident(cid: int) -> bool:
+                return class_name(cid).lower() in name_targets or cid in id_targets
+        else:
+            def is_accident(cid: int) -> bool:
+                name = class_name(cid).lower()
+                return any(kw in name for kw in self._ACCIDENT_KEYWORDS)
+
+        keep = [i for i, cid in enumerate(detections.class_id) if is_accident(int(cid))]
+        return detections[np.array(keep, dtype=int)]
 
     def _on_manual_trigger(self):
         """Called when the user presses SPACE on the display."""
